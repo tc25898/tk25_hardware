@@ -3,6 +3,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <html>
 <head>
     <title>UGV01_BASE_WEB</title>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <!-- <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script> -->
     <style type="text/css">
@@ -245,6 +246,38 @@ const char index_html[] PROGMEM = R"rawliteral(
         .big-num{font-size: 2em;}
         .controlor > div{margin: 40px 0;}
     }
+    .host-wifi-form{
+        padding: 20px;
+    }
+    .host-wifi-fields{
+        align-items: flex-end;
+        gap: 20px;
+    }
+    .host-wifi-fields label{
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+    }
+    .host-wifi-fields input{
+        display: block;
+        box-sizing: border-box;
+        margin-top: 10px;
+        margin-right: 0;
+    }
+    .host-wifi-fields .host-send-field{
+        flex: 0 0 90px;
+    }
+    .host-message{
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+    @media screen and (max-width: 767px){
+        .host-wifi-fields{display: block;}
+        .host-wifi-fields label{
+            display: block;
+            margin: 20px 0;
+        }
+    }
     </style>
 </head>
 <body>
@@ -374,6 +407,28 @@ const char index_html[] PROGMEM = R"rawliteral(
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+        <section id="host-wifi" aria-labelledby="host-wifi-title">
+            <div class="fb-info">
+                <h2 id="host-wifi-title" class="h2-tt">Host Wi-Fi configuration</h2>
+                <p>Send Wi-Fi credentials to Host.</p>
+            </div>
+            <form id="host-wifi-form" class="fb-input-info info-box host-wifi-form">
+                <div class="feedb-p host-wifi-fields">
+                    <label for="host-ssid">Network name (SSID)
+                        <input id="host-ssid" name="ssid" type="text" required autocomplete="off" spellcheck="false" placeholder="Enter network name">
+                    </label>
+                    <label for="host-password">Password
+                        <input id="host-password" name="password" type="password" required minlength="8" maxlength="64" autocomplete="off" placeholder="Enter Wi-Fi password">
+                    </label>
+                    <label class="host-send-field"><button id="host-send" class="small-btn btn-send" type="submit">SEND</button></label>
+                </div>
+                <p>WPA-PSK: 8–63 ASCII characters or a 64-digit hex key. SSID: up to 32 UTF-8 bytes.</p>
+            </form>
+            <div class="fb-info">
+                <span id="host-wifi-message" class="host-message" role="status" aria-live="polite">No Host Wi-Fi request sent.</span>
+                <p>Latest message received from Host.</p>
             </div>
         </section>
         <section>
@@ -671,6 +726,99 @@ const char index_html[] PROGMEM = R"rawliteral(
         infoUpdate();
     }, 1000);
 
+    // Status polling observes the latest Host message, with no reply deadline.
+    var hostSubmitting = false;
+    var hostPolling = false;
+    var hostGeneration = 0;
+    var hostLastStatus = '';
+    var hostMessage = document.getElementById('host-wifi-message');
+
+    function pollHostWifi() {
+        if (hostSubmitting || hostPolling) return;
+        hostPolling = true;
+        var generation = hostGeneration;
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState != 4) return;
+            hostPolling = false;
+            if (this.status != 200 || generation !== hostGeneration || hostSubmitting) return;
+            try {
+                var status = JSON.parse(this.responseText);
+                var key = JSON.stringify(status);
+                if (key === hostLastStatus) return;
+                hostLastStatus = key;
+                if (status.state === 'reply' && typeof status.result === 'string') {
+                    hostMessage.textContent = status.result;
+                } else if (status.state === 'sent') {
+                    hostMessage.textContent = 'Request sent. Host has not replied yet.';
+                } else {
+                    hostMessage.textContent = 'No Host Wi-Fi request sent.';
+                }
+            } catch (_) {
+                // Retain the latest message if a status response is malformed.
+            }
+        };
+        xhttp.open("GET", "/host/wifi/status", true);
+        xhttp.send();
+    }
+
+    function hostWifiSend(event) {
+        event.preventDefault();
+        if (hostSubmitting) return;
+        var ssid = document.getElementById('host-ssid').value;
+        var passwordInput = document.getElementById('host-password');
+        var password = passwordInput.value;
+        var ssidBytes = new TextEncoder().encode(ssid).length;
+        if (ssidBytes < 1 || ssidBytes > 32 || ssid.includes('\0')) {
+            hostMessage.textContent = 'SSID must contain 1–32 UTF-8 bytes without NUL.';
+            return;
+        }
+        if (!/^[\x20-\x7e]{8,63}$/.test(password) && !/^[0-9a-fA-F]{64}$/.test(password)) {
+            hostMessage.textContent = 'Use 8–63 printable ASCII characters or a 64-digit hex key.';
+            return;
+        }
+        hostSubmitting = true;
+        ++hostGeneration;
+        document.getElementById('host-send').disabled = true;
+        hostMessage.textContent = 'Sending request to ESP…';
+        var jsonCmd = {T: -1001, ssid: ssid, password: password};
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState != 4) return;
+            if (this.status == 202) {
+                passwordInput.value = '';
+                hostLastStatus = '';
+                hostMessage.textContent = 'Request sent. Host has not replied yet.';
+            } else {
+                var error = 'HTTP submission failed; outcome unknown';
+                try {
+                    var response = JSON.parse(this.responseText);
+                    if (typeof response.error === 'string') error = response.error;
+                } catch (_) {}
+                hostMessage.textContent = 'Could not confirm submission: ' + error + '. No automatic resend.';
+            }
+            ++hostGeneration;
+            hostSubmitting = false;
+            document.getElementById('host-send').disabled = false;
+            pollHostWifi();
+        };
+        xhttp.open("POST", "/host/wifi", true);
+        xhttp.setRequestHeader("Content-Type", "application/json");
+        xhttp.send(JSON.stringify(jsonCmd));
+        password = '';
+        jsonCmd.password = '';
+    }
+    document.getElementById('host-wifi-form').addEventListener('submit', hostWifiSend);
+    pollHostWifi();
+    setInterval(function() {
+        pollHostWifi();
+    }, 1000);
+
+    function editingField(event) {
+        var target = event && event.target;
+        return target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+    }
+
     function cmdFill(rawInfo, fillInfo) {
         document.getElementById(rawInfo).value = document.getElementById(fillInfo).innerHTML;
     }
@@ -937,6 +1085,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     document.onkeydown = function (event) {
+        if (editingField(event)) return;
         var e = event || window.event || arguments.callee.caller.arguments[0];
         if (e && e.keyCode == 65) {
             // alert ("A down");
@@ -991,6 +1140,13 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     document.onkeyup = function (event) {
         var e = event || window.event || arguments.callee.caller.arguments[0];
+        // A control key pressed before focus moved into the form must still
+        // release its held direction. Ordinary typing never starts a command.
+        if (editingField(e) && !(e && (
+            ((e.keyCode == 65 || e.keyCode == 37) && leftButton) ||
+            ((e.keyCode == 87 || e.keyCode == 38) && forwardButton) ||
+            ((e.keyCode == 83 || e.keyCode == 40) && backwardButton) ||
+            ((e.keyCode == 68 || e.keyCode == 39) && rightButton)))) return;
         if (e && e.keyCode == 65) {
             // alert ("A up");
             leftButton = 0;

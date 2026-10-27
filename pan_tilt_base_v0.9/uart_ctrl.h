@@ -494,26 +494,36 @@ void jsonCmdReceiveHandler(){
 
 
 void serialCtrl() {
-  static String receivedData;
-
-  while (Serial.available() > 0) {
+  // Zero-copy JSON parsing borrows this buffer only until the next frame.
+  static char receivedData[UART_FRAME_BYTES];
+  static size_t used = 0;
+  static bool discard = false;
+  // Bound work per loop so HTTP and heartbeat processing continue under RX load.
+  size_t budget = UART_FRAME_BYTES;
+  while (budget-- && Serial.available() > 0) {
     char receivedChar = Serial.read();
-    receivedData += receivedChar;
-
-    // Detect the end of the JSON string based on a specific termination character
     if (receivedChar == '\n') {
-      // Now we have received the complete JSON string
-      DeserializationError err = deserializeJson(jsonCmdReceive, receivedData);
-      if (err == DeserializationError::Ok) {
-  			if (InfoPrint == 1 && uartCmdEcho) {
-  				Serial.print(receivedData);
-  			}
-        jsonCmdReceiveHandler();
-      } else {
-        // Handle JSON parsing error here
+      if (!discard && used) {
+        receivedData[used] = '\0';
+        // Management input must never echo credentials or turn replies into requests.
+        DeserializationError err = deserializeJson(jsonCmdReceive, receivedData, used);
+        if (!err && jsonCmdReceive.is<JsonObject>()) {
+          if (!handleHostWifiReply(jsonCmdReceive)) {
+            if (InfoPrint == 1 && uartCmdEcho) {
+              serializeJson(jsonCmdReceive, Serial);
+              Serial.write('\n');
+            }
+            jsonCmdReceiveHandler();
+          }
+        }
+        jsonCmdReceive.clear();
       }
-      // Reset the receivedData for the next JSON string
-      receivedData = "";
+      used = 0;
+      discard = false;
+    } else if (receivedChar == '\0' || used == sizeof(receivedData) - 1) {
+      discard = true;
+    } else if (!discard) {
+      receivedData[used++] = receivedChar;
     }
   }
 }
