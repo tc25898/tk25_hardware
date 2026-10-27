@@ -816,7 +816,8 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     function editingField(event) {
         var target = event && event.target;
-        return target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+        return target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) ||
+            (target.closest && target.closest('#host-wifi-form')));
     }
 
     function cmdFill(rawInfo, fillInfo) {

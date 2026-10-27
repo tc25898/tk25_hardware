@@ -69,11 +69,13 @@ the browser uses `XMLHttpRequest` and interval polling like the existing page.
 The form reuses the page's classes and adds only layout/message-wrapping CSS.
 Host status is separate from `jsonInfoHttp`, which normal command replies clear.
 
-Typing in input/select/textarea/content-editable fields does not start movement
-or invoke the keyboard's raw-command submission. Takeover review corrected one
-edge case in the supplied patch: a control key pressed before focus moved into
-a form still releases its already-held direction on key-up. Ordinary typing
-with no held direction remains ignored. Heartbeat, actuator modules, boot
+The entire Host provisioning form, including SEND and nested elements, is
+excluded from document-level command shortcuts. Enter/Space retains the button's
+normal form activation, without also submitting the raw JSON command or
+starting movement. Input/select/textarea/content-editable elements elsewhere
+remain excluded too. A control key pressed before focus moved into the form
+still releases its already-held direction on key-up. Ordinary typing with no
+held direction remains ignored. Heartbeat, actuator modules, boot
 initialization, command IDs and motion limits are unchanged by this PR.
 
 ## Bounds and resource review
@@ -118,18 +120,38 @@ esptool 4.5.1's host dependencies. No source Python tooling was added.
   per-loop RX budget, oversized/NUL recovery and vendor dispatch. It exercises
   software paths without a physical UART or actuator. No new test suite added.
 - The complete sketch compiled, linked and generated its binary with the pins
-  above. Compiler report: 1,001,605 bytes program storage (76%) and 51,776 bytes
+  above. Compiler report: 1,001,669 bytes program storage (76%) and 51,776 bytes
   static global storage (15%). These are build results, not measured free heap,
   heartbeat latency or delivered-board compatibility. No LTO flags or actuator
   modules were changed. The bundled esptool's host dependencies were installed
   only in the temporary build workspace; no Python application/tool was added.
 - Source blobs for the management header, HTTP handlers, command ID, sketch
   include, UART receiver and shared frame limit exactly match the supplied patch.
-  The webpage differs only in preserving the held-key release described above;
+  The webpage differs by excluding the entire form from command shortcuts and
+  preserving the held-key release described above;
   documentation now records takeover validation and the two-result Pico peer.
   Whitespace checks passed with CRLF treated as line endings; existing file
   endings, including the mixed-ending config header, are preserved. Temporary
   validation sources, tools, libraries and binaries remain outside this repo.
+
+### PR #1 review follow-up
+
+Addressed the [SEND-button shortcut finding](https://github.com/tc25898/tk25_hardware/pull/1#issuecomment-6453356255).
+The temporary Node VM check first reproduced Enter on the focused SEND button
+leaking a raw `/js` request with a prefilled actuator command. The guard now
+uses `closest('#host-wifi-form')` as well as the existing editable-element
+checks, covering the form itself, buttons and all descendants. No default
+button action is cancelled, and the held-direction key-up exception is retained.
+
+The extended check passes Enter/Space/WASD/arrows on BUTTON/SPAN/FORM/DIV/LABEL
+inside the form with no control requests, Host-only Enter submission, and all
+eight movement-key releases after focus enters SEND. Existing provisioning,
+password clearing and repeated/late result checks also pass. No new test suite,
+UART/heartbeat code change or hardware operation. Full-sketch build and
+CRLF-aware whitespace checks passed again. The compiler-reported program
+storage grows by 64 bytes from the takeover build, with unchanged static global
+storage; there are no new buffers, queues or workers. These are build results,
+not measured runtime memory or latency.
 
 With the pinned dependencies installed:
 
