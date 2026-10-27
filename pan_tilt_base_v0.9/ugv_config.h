@@ -358,6 +358,8 @@ const uint16_t FREQ = 200;
 
 int feedbackFlowExtraDelay = 100;
 bool uartCmdEcho = 0;
+// Shared receive/request frame limit, including the terminating newline.
+const size_t UART_FRAME_BYTES = 1024;
 
 #define GIMBAL_PAN_ID  2
 #define GIMBAL_TILT_ID 1

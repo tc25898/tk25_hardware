@@ -42,6 +42,11 @@ For the mechanical assembly and vendor-side configuration guide, see:
 
 - https://www.waveshare.net/wiki/2-Axis_Pan-Tilt_Camera_Module_组装和配置教程
 
+## Host Wi-Fi configuration
+
+The ESP webpage can send Wi-Fi credentials to Host and display its latest UART
+reply. See [protocol, setup and validation](docs/host-wifi.md).
+
 ## Arduino IDE Setup
 
 1. Open [`pan_tilt_base_v0.9.ino`](./pan_tilt_base_v0.9.ino) in Arduino IDE.
