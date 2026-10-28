@@ -515,12 +515,6 @@
 // {"T":408}
 #define CMD_WIFI_STOP 408
 
-// host management over UART (separate from ESP Wi-Fi settings).
-// request: {"T":-1001,"ssid":"example-network","password":"example-passphrase"}
-// reply: {"T":-1001,"result":"host message"}
-// Replies are handled by handleHostWifiReply() before vendor command dispatch.
-#define CMD_HOST_WIFI_CONFIGURE -1001
-
 
 
 // === === === servo settings. === === ===

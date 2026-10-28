@@ -63,9 +63,6 @@ StaticJsonDocument<512> jsonInfoHttp;
 // functions for esp-now.
 #include "esp_now_ctrl.h"
 
-// host Wi-Fi request and reply functions.
-#include "host_wifi_ctrl.h"
-
 // functions for uart json ctrl.
 #include "uart_ctrl.h"
 
@@ -95,14 +92,7 @@ void moduleType_RoArmM2() {
 
 
 void moduleType_Gimbal() {
-  static unsigned long lastGimbalFeedbackTime = 0;
-  const unsigned long gimbalFeedbackIntervalMs = 20;
-
-  if (millis() - lastGimbalFeedbackTime >= gimbalFeedbackIntervalMs) {
-    getGimbalFeedback();
-    lastGimbalFeedbackTime = millis();
-  }
-
+  getGimbalFeedback();
   gimbalSteady(steadyGoalY);
 }
 

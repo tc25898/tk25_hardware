@@ -40,7 +40,7 @@ byte mainType = 1;
 // 0: [Base default] without RoArm-M2 and gimbal.
 // 1: [RoArm default] RoArm-M2 mounted on the UGV.
 // 2: [Gimbal default] Gimbal mounted on the UGV.
-byte moduleType = 2;
+byte moduleType = 0;
 
 // false: gimbal steady mode off.
 //  true: gimbal steady mode on.
@@ -358,8 +358,6 @@ const uint16_t FREQ = 200;
 
 int feedbackFlowExtraDelay = 100;
 bool uartCmdEcho = 0;
-// Shared receive/request frame limit, including the terminating newline.
-const size_t UART_FRAME_BYTES = 1024;
 
 #define GIMBAL_PAN_ID  2
 #define GIMBAL_TILT_ID 1
