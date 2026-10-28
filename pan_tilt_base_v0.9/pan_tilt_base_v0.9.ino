@@ -63,6 +63,9 @@ StaticJsonDocument<512> jsonInfoHttp;
 // functions for esp-now.
 #include "esp_now_ctrl.h"
 
+// host Wi-Fi request and reply functions.
+#include "host_wifi_ctrl.h"
+
 // functions for uart json ctrl.
 #include "uart_ctrl.h"
 
