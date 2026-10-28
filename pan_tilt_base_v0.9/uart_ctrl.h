@@ -55,7 +55,7 @@ void jsonCmdReceiveHandler(){
 												jsonCmdReceive["y"],
 												jsonCmdReceive["z"]);break;
 	case CMD_BASE_FEEDBACK:
-												baseInfoFeedback(true);break;
+												baseInfoFeedback();break;
 	case CMD_BASE_FEEDBACK_FLOW:
 												setBaseInfoFeedbackMode(
 												jsonCmdReceive["cmd"]);break;

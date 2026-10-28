@@ -144,14 +144,6 @@ void gimbalSteady(float inputBiasY) {
 void gimbalUserCtrl(int inputX, int inputY, int inputSpd) {
   static float goalX = 0;
   static float goalY = 0;
-  static int prevInputX = 0;
-  static int prevInputY = 0;
-  static bool panStopPending = false;
-  static bool tiltStopPending = false;
-  static unsigned long panStopTime = 0;
-  static unsigned long tiltStopTime = 0;
-
-  const unsigned long now = millis();
 
   if(inputX == -1 && inputY == 1){
     goalX = -180;
@@ -187,67 +179,45 @@ void gimbalUserCtrl(int inputX, int inputY, int inputSpd) {
   }
   else{
     gimbalCtrlSimple(goalX, goalY, inputSpd, 0);
-    if(inputX == 0 && prevInputX != 0){
+    if(inputX == 0){
       servoTorqueCtrl(GIMBAL_PAN_ID, 0);
-      panStopPending = true;
-      panStopTime = now;
-    }
-
-    if(inputY == 0 && prevInputY != 0){
-      servoTorqueCtrl(GIMBAL_TILT_ID, 0);
-      tiltStopPending = true;
-      tiltStopTime = now;
-    }
-
-    if(panStopPending && (now - panStopTime >= 5)) {
+      delay(5);
       servoTorqueCtrl(GIMBAL_PAN_ID, 1);
-      panStopPending = false;
+      getGimbalFeedback();
       goalX = panAngleCompute(gimbalFeedback[0].pos);
     }
-
-    if(tiltStopPending && (now - tiltStopTime >= 5)) {
+    if(inputY == 0){
+      servoTorqueCtrl(GIMBAL_TILT_ID, 0);
+      delay(5);
       servoTorqueCtrl(GIMBAL_TILT_ID, 1);
-      tiltStopPending = false;
+      getGimbalFeedback();
       goalY = tiltAngleCompute(gimbalFeedback[1].pos);
     }
-
-    if(inputX != 0 && panStopPending) {
-      servoTorqueCtrl(GIMBAL_PAN_ID, 1);
-      panStopPending = false;
-    }
-
-    if(inputY != 0 && tiltStopPending) {
-      servoTorqueCtrl(GIMBAL_TILT_ID, 1);
-      tiltStopPending = false;
-    }
   }
-
-  prevInputX = inputX;
-  prevInputY = inputY;
 }
 
 
 void gimbalUserCtrlShell(float lSpd, float rSpd) {
   int cmdX = 0;
   int cmdY = 0;
-  if (lSpd > 0 && rSpd > 0 && fabs(lSpd) == fabs(rSpd)) {
+  if (lSpd > 0 && rSpd > 0 && abs(lSpd) == abs(lSpd)) {
     cmdY = 1;
-  } else if (lSpd < 0 && rSpd < 0 && fabs(lSpd) == fabs(rSpd)) {
+  } else if (lSpd < 0 && rSpd < 0 && abs(lSpd) == abs(lSpd)) {
     cmdY = -1;
-  } else if (lSpd < 0 && rSpd > 0 && fabs(lSpd) == fabs(rSpd)) {
+  } else if (lSpd < 0 && rSpd > 0 && abs(lSpd) == abs(lSpd)) {
     cmdX = -1;
-  } else if (lSpd > 0 && rSpd < 0 && fabs(lSpd) == fabs(rSpd)) {
+  } else if (lSpd > 0 && rSpd < 0 && abs(lSpd) == abs(lSpd)) {
     cmdX = 1;
-  } else if (lSpd > 0 && rSpd > 0 && fabs(lSpd) < fabs(rSpd)) {
+  } else if (lSpd > 0 && rSpd > 0 && abs(lSpd) < abs(rSpd)) {
     cmdX = -1;
     cmdY = 1;
-  } else if (lSpd > 0 && rSpd > 0 && fabs(lSpd) > fabs(rSpd)) {
+  } else if (lSpd > 0 && rSpd > 0 && abs(lSpd) > abs(rSpd)) {
     cmdX = 1;
     cmdY = 1;
-  } else if (lSpd < 0 && rSpd < 0 && fabs(lSpd) < fabs(rSpd)) {
+  } else if (lSpd < 0 && rSpd < 0 && abs(lSpd) < abs(rSpd)) {
     cmdX = -1;
     cmdY = -1;
-  } else if (lSpd < 0 && rSpd < 0 && fabs(lSpd) > fabs(rSpd)) {
+  } else if (lSpd < 0 && rSpd < 0 && abs(lSpd) > abs(rSpd)) {
     cmdX = 1;
     cmdY = -1;
   }

@@ -5,8 +5,11 @@ controls. It sends an SSID and WPA-PSK password to Host and displays the latest
 UART reply. This is separate from ESP's existing access-point/station settings.
 "Host" names the 上位机 role, independently of its processor, OS or application.
 
-This PR takes over the owner-supplied patch
-`63118190276bb3dfdedf371bcca7fdbf9d265505`, based on repository main `6ee8022`.
+This feature was delivered in [PR #1](https://github.com/tc25898/tk25_hardware/pull/1),
+commits `8b12bf4` and `85ac5da`, taking over the owner-supplied patch
+`63118190276bb3dfdedf371bcca7fdbf9d265505` on community baseline `6ee8022`.
+It is now reapplied to the official product ZIP; see the
+[migration scope and current build evidence](migration.md).
 The corresponding Pico live-apply implementation is
 [backyard-defense PR #20](https://github.com/tc25898/backyard-defense/pull/20).
 
@@ -97,7 +100,7 @@ bound for the HTTP parser itself. UART TX uses the existing synchronous Serial
 writer but never waits for a Host reply. These are source-derived bounds, not
 measured target free-heap or timing improvements.
 
-## Validation and handoff
+## Original PR #1 validation (historical)
 
 The takeover retains the supplied patch's toolchain/library pins. Current
 validation uses Arduino CLI 1.2.2, ESP32 core 2.0.17 and generic validation FQBN
@@ -159,7 +162,9 @@ With the pinned dependencies installed:
 arduino-cli compile --fqbn esp32:esp32:esp32 pan_tilt_base_v0.9
 ```
 
-Next: PR review, then separately authorize installing on the delivered ESP and
-validate two same-T replies with Pico over real UART. Hardware boot, real
-Wi-Fi switching/persistence, heartbeat timing and actuator behavior remain
-unverified. No flash, deployment or hardware operation is part of this PR.
+The checks above describe the original PR, whose community source baseline
+differs from the official ZIP. Current migration checks and build sizes are in
+[migration validation](migration.md#validation). Hardware boot, real UART
+provisioning, Wi-Fi switching/persistence, heartbeat timing and actuator behavior
+remain unverified by these software checks. No flash, deployment or hardware
+operation is part of the migration.

@@ -95,14 +95,7 @@ void moduleType_RoArmM2() {
 
 
 void moduleType_Gimbal() {
-  static unsigned long lastGimbalFeedbackTime = 0;
-  const unsigned long gimbalFeedbackIntervalMs = 20;
-
-  if (millis() - lastGimbalFeedbackTime >= gimbalFeedbackIntervalMs) {
-    getGimbalFeedback();
-    lastGimbalFeedbackTime = millis();
-  }
-
+  getGimbalFeedback();
   gimbalSteady(steadyGoalY);
 }
 
